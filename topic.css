@@ -1,0 +1,35 @@
+/* topic.css — light-mode styles for topic.html */
+:root{
+  --bg: #0f1720; /* fallback, overridden by body below */
+  --surface: #fff;
+  --muted: #6b7280;
+  --text: #0b1220;
+  --muted-2: #9ca3af;
+  --accent: #111827;
+  --row-border: #eef2f6;
+}
+/* ensure same base font as main stylesheet */
+html,body{height:100%;}
+body{ background:var(--surface); color:var(--text); font-family:'Irnia Serif', Georgia, serif; font-weight:300; margin:0; }
+.app{ display:flex; min-height:100vh; }
+.sidebar{ width:64px; background:transparent; border-right:1px solid rgba(0,0,0,0.04); display:flex; align-items:flex-start; justify-content:center; padding-top:18px }
+.logo{ font-size:20px; opacity:.9 }
+.content{ flex:1; display:flex; flex-direction:column; }
+.topbar{ display:flex; align-items:center; justify-content:space-between; padding:28px 36px 12px 28px; border-bottom:1px solid rgba(0,0,0,0.04); }
+.topic{ font-size:28px; font-weight:300; color:var(--text); }
+.subtitle{ margin-top:6px; font-size:13px; color:var(--muted-2); }
+.back{ color:#0b63d6; text-decoration:none; font-size:13px }
+.panel{ padding:18px 28px; }
+.searchRow{ margin-bottom:12px }
+.search{ width:100%; max-width:640px; padding:10px 12px; border:1px solid #e6eef6; border-radius:8px; font-size:15px; outline:none; }
+.list{ max-height: calc(100vh - 160px); overflow:auto; padding-right:8px; }
+.row{ display:flex; align-items:flex-start; gap:16px; padding:14px 12px; border-bottom:1px solid rgba(0,0,0,0.04); }
+.radio{ width:20px; height:20px; border-radius:50%; border:2px solid #cbd5e1; flex:0 0 20px; margin-top:6px }
+.info{ flex:1 }
+.title{ font-size:16px; color:var(--text); }
+.repo{ font-size:12px; color:var(--muted-2); margin-top:4px }
+.row:hover{ background: #fbfdff }
+/* subtle scrollbar for list */
+.list::-webkit-scrollbar{ width:10px }
+.list::-webkit-scrollbar-thumb{ background: rgba(0,0,0,0.06); border-radius:8px }
+@media (max-width:700px){ .sidebar{ display:none } .topbar{ padding:18px } .topic{ font-size:22px } }

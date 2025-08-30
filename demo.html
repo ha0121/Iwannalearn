@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Demo - type your subject</title>
+    <link rel="stylesheet" href="styles.css" />
+    <style>
+      /* minimal overrides for demo page */
+      body{background:#fff}
+      .center{height:100vh}
+      /* larger headline to match design */
+      .headline{font-size:4.6rem}
+      /* brackets should stay strong/black while placeholder text is muted */
+      .brackets{cursor:text; color: #000;}
+  .hint{margin-top:0.4rem;color:#999;font-family:Arial,Helvetica,sans-serif;font-size:0.9rem; position:relative; top:-24px}
+  /* placeholder style for random suggestions: keep text black as requested */
+  .typed.placeholder{color:#000; font-style:normal}
+      /* normal typed text (user-entered) should be full contrast */
+      .typed{color: #000}
+      /* slightly tighter letter spacing like in the sample */
+  .brackets, .typed{letter-spacing:0.6px}
+  /* suggestion list placed absolutely below the centered headline so it won't shift layout */
+  #suggestList{ display:none; position:fixed; left:50%; transform:translateX(-50%); pointer-events:auto; z-index:3; }
+  .suggest-item{ opacity:0.18; margin:6px 0; cursor:pointer; font-size:1.6rem; transition: color .12s ease, opacity .12s ease; }
+  .suggest-item:hover, .suggest-item:focus{ color: #000; opacity:1; outline:none; }
+  .suggest-item.active{ background: rgba(0,0,0,0.03); color:#000; opacity:1; padding:4px 8px; border-radius:4px; }
+    </style>
+  </head>
+  <body>
+    <main class="center">
+        <div class="hint">*Click the text to type your own subject. Suggestions will appear as you type.</div>
+      <h1 class="headline">
+        <span class="muted">i want to learn</span>
+        <span class="brackets">[<span id="demoTyped" class="typed placeholder" contenteditable="false" aria-label="Type your subject"></span>]</span>
+      </h1>
+        
+  <!-- suggestion list shown while typing -->
+  <div id="suggestList" class="suggest-list" aria-hidden="true"></div>
+    </main>
+
+    <script>
+      // Inline editing: click the text to enable typing directly.
+      const demoTyped = document.getElementById('demoTyped');
+      const brackets = demoTyped.parentElement; // .brackets span
+
+      // random suggestion pool: many professions / fields in English
+      const suggestions = [
+        'Doctor','Nurse','Surgeon','Dentist','Pharmacist','Physician Assistant','Paramedic','EMT','Physical Therapist','Occupational Therapist',
+        'Psychologist','Counselor','Social Worker','Veterinarian','Vet Technician','Radiologist','Lab Technician','Researcher','Biologist','Chemist',
+        'Physicist','Data Scientist','Statistician','Software Developer','Web Developer','Full Stack Developer','Mobile Developer','DevOps Engineer',
+        'Systems Administrator','Database Administrator','Network Engineer','AI Engineer','Machine Learning Engineer','Cybersecurity Specialist','UX Designer',
+        'UI Designer','Product Designer','Graphic Designer','Animator','Game Designer','3D Artist','Illustrator','Photographer','Videographer','Film Editor',
+        'Writer','Copywriter','Editor','Journalist','Content Strategist','Blogger','Translator','Interpreter','Librarian','Archivist',
+        'Teacher','Professor','Lecturer','Tutor','Preschool Teacher','Kindergarten Teacher','Special Education Teacher','School Counselor','Coach','Trainer',
+        'Lawyer','Paralegal','Judge','Legal Assistant','Policy Analyst','Diplomat','Politician','Public Relations Specialist','Marketing Manager','SEO Specialist',
+        'Sales Manager','Account Manager','Business Analyst','Management Consultant','Project Manager','Product Manager','HR Manager','Recruiter','Accountant',
+        'Auditor','Financial Analyst','Investment Banker','Insurance Agent','Real Estate Agent','Mortgage Broker','Economist','Budget Analyst','Entrepreneur',
+        'Startup Founder','Operations Manager','Logistics Manager','Supply Chain Manager','Warehouse Manager','Truck Driver','Delivery Driver','Chef','Cook',
+        'Baker','Barista','Restaurant Manager','Hotel Manager','Housekeeper','Event Planner','Wedding Planner','Florist','Fashion Designer','Tailor','Seamstress',
+        'Barber','Hairstylist','Makeup Artist','Cosmetologist','Esthetician','Jeweler','Watchmaker','Interior Designer','Architect','Civil Engineer',
+        'Mechanical Engineer','Electrical Engineer','Chemical Engineer','Environmental Engineer','Construction Worker','Carpenter','Plumber','Electrician','Mechanic',
+        'Welder','Blacksmith','Painter','Gardener','Farmer','Fisherman','Forester','Conservationist','Park Ranger','Security Guard','Police Officer','Firefighter'
+      ];
+
+      let rotateInterval = null;
+      let typingTimer = null;
+      let deleteTimer = null;
+      let nextTimer = null;
+
+      function pickSuggestion(){
+        return suggestions[Math.floor(Math.random()*suggestions.length)];
+      }
+
+      // Typing animation: type letters, pause, then delete, and schedule next
+      function typeSuggestion(word){
+        stopRotating();
+        demoTyped.classList.add('placeholder');
+        demoTyped.contentEditable = 'false';
+        demoTyped.textContent = '';
+        demoTyped.classList.add('caret');
+        let i = 0;
+        // type
+        typingTimer = setInterval(()=>{
+          demoTyped.textContent += word[i++] || '';
+          if(i > word.length){
+            clearInterval(typingTimer); typingTimer = null;
+            // pause then delete
+            nextTimer = setTimeout(()=>{ deleteSuggestion(); }, 900 + Math.random()*800);
+          }
+        }, 90);
+
+        function deleteSuggestion(){
+          demoTyped.classList.add('caret');
+          let j = word.length;
+          deleteTimer = setInterval(()=>{
+            demoTyped.textContent = word.slice(0, --j);
+            if(j <= 0){ clearInterval(deleteTimer); deleteTimer = null; scheduleNext(); }
+          }, 50);
+        }
+
+        function scheduleNext(){
+          demoTyped.classList.remove('caret');
+          nextTimer = setTimeout(()=>{
+            if(!rotateInterval) startRotating();
+          }, 600 + Math.random()*1000);
+        }
+      }
+
+      function startRotating(){
+        // pick first suggestion and start typing loop
+        const s = pickSuggestion();
+        typeSuggestion(s);
+        // also set a fallback interval to start typing a new suggestion if everything cleared
+        rotateInterval = setInterval(()=>{
+          const s2 = pickSuggestion();
+          typeSuggestion(s2);
+        }, 4200 + Math.random()*1600);
+      }
+
+      function clearTimers(){
+        if(typingTimer) { clearInterval(typingTimer); typingTimer = null; }
+        if(deleteTimer) { clearInterval(deleteTimer); deleteTimer = null; }
+        if(nextTimer) { clearTimeout(nextTimer); nextTimer = null; }
+      }
+
+      function stopRotating(){
+        if(rotateInterval) { clearInterval(rotateInterval); rotateInterval = null; }
+        clearTimers();
+      }
+
+      // initialize
+      startRotating();
+
+      // enable inline editing on click
+      brackets.addEventListener('click', () => {
+        stopRotating();
+        demoTyped.classList.remove('placeholder');
+  demoTyped.contentEditable = 'true';
+  demoTyped.classList.add('caret');
+  demoTyped.focus();
+        // move caret to end
+        document.execCommand('selectAll', false, null);
+        document.getSelection().collapseToEnd();
+        // if the current text is a suggestion, clear it for typing
+        if(suggestions.includes(demoTyped.textContent)) demoTyped.textContent = '';
+  // show suggestion area when user starts typing
+  updateSuggestions('');
+      });
+
+      // finish editing on Enter (prevent newline) or blur; if non-empty, navigate to topic page
+      demoTyped.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          demoTyped.contentEditable = 'false';
+          const val = demoTyped.textContent.trim();
+          if (val) {
+            window.location.href = 'topic.html?subject=' + encodeURIComponent(val);
+          } else {
+            demoTyped.blur();
+          }
+        }
+      });
+
+      demoTyped.addEventListener('blur', () => {
+        demoTyped.contentEditable = 'false';
+        if (!demoTyped.textContent.trim()){
+          // if empty, resume rotating suggestions
+          demoTyped.classList.remove('caret');
+          startRotating();
+        } else {
+          demoTyped.classList.remove('placeholder');
+          demoTyped.classList.remove('caret');
+        }
+        // hide suggestion box after small delay to allow click
+        setTimeout(()=>{ hideSuggestList(); }, 150);
+      });
+
+  // suggestion list DOM and helpers (absolutely positioned so it doesn't affect layout)
+  const suggestList = document.getElementById('suggestList');
+
+      const headlineEl = document.querySelector('.headline');
+
+      function showSuggestList(){
+        // position the list under the headline center so it doesn't shift layout
+        const rect = headlineEl.getBoundingClientRect();
+        const left = rect.left + rect.width/2; // center x
+        const top = rect.bottom + 12; // a bit below the headline
+        suggestList.style.left = left + 'px';
+        suggestList.style.top = top + 'px';
+        suggestList.setAttribute('aria-hidden','false');
+        suggestList.style.display='block';
+      }
+
+      function hideSuggestList(){ suggestList.setAttribute('aria-hidden','true'); suggestList.style.display='none'; }
+
+      function updateSuggestions(q){
+        const v = (q || demoTyped.textContent || '').trim().toLowerCase();
+        if(!v || v.length < 1){ hideSuggestList(); return; }
+        // filter
+        const results = suggestions.filter(s => s.toLowerCase().startsWith(v)).slice(0,6);
+        if(results.length===0){ hideSuggestList(); return; }
+        suggestList.innerHTML = '';
+        // keyboard active index
+        let activeIndex = -1;
+        results.forEach(r => {
+          const d = document.createElement('div');
+          d.className='suggest-item';
+          d.textContent = r;
+          // when the user clicks a suggestion, navigate to topic.html with the chosen subject
+          d.addEventListener('mousedown',(e)=>{
+            e.preventDefault();
+            demoTyped.textContent = r;
+            demoTyped.classList.remove('placeholder');
+            hideSuggestList();
+            demoTyped.contentEditable = 'false';
+            window.location.href = 'topic.html?subject=' + encodeURIComponent(r);
+          });
+          suggestList.appendChild(d);
+        });
+        // set up keyboard handlers to move through items
+        const items = Array.from(suggestList.querySelectorAll('.suggest-item'));
+        function setActive(i){
+          items.forEach((it, idx)=> it.classList.toggle('active', idx===i));
+          activeIndex = i;
+        }
+        demoTyped._suggestItems = items;
+        demoTyped._setActive = setActive;
+        demoTyped._activeIndex = activeIndex;
+        showSuggestList();
+      }
+
+      // update while typing
+      demoTyped.addEventListener('input', ()=>{
+        updateSuggestions(demoTyped.textContent);
+      });
+
+      // keyboard navigation inside the contenteditable field
+      demoTyped.addEventListener('keydown', (e)=>{
+        const items = demoTyped._suggestItems || [];
+        const activeIndex = demoTyped._activeIndex || -1;
+        if(items.length && (e.key === 'ArrowDown' || e.key === 'ArrowUp')){
+          e.preventDefault();
+          let next = activeIndex;
+          if(e.key === 'ArrowDown') next = Math.min(items.length - 1, (activeIndex === -1 ? 0 : activeIndex + 1));
+          if(e.key === 'ArrowUp') next = Math.max(0, (activeIndex === -1 ? items.length - 1 : activeIndex - 1));
+          demoTyped._setActive(next);
+          demoTyped._activeIndex = next;
+          return;
+        }
+        if(e.key === 'Enter'){
+          // handled earlier: if suggestion active, pick it
+          const idx = demoTyped._activeIndex;
+          if(typeof idx === 'number' && idx >= 0 && (demoTyped._suggestItems || []).length){
+            e.preventDefault();
+            const val = demoTyped._suggestItems[idx].textContent;
+            window.location.href = 'topic.html?subject=' + encodeURIComponent(val);
+          }
+        }
+      });
+
+      // keyboard accessibility
+      brackets.tabIndex = 0;
+      brackets.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          brackets.click();
+        }
+      });
+    </script>
+  </body>
+</html>

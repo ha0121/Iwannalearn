@@ -1,0 +1,84 @@
+:root{
+	--bg: #fff;
+	--muted: #cfcfcf;
+	--text: #111;
+	--accent: #000;
+}
+*{box-sizing:border-box}
+html,body{height:100%;}
+/* If you have a webfont URL for "Irnia Serif" you can add a <link> in index.html or an @font-face rule here. */
+body{
+	margin:0;
+	background:var(--bg);
+	/* primary font requested by user; fall back to Georgia and generic serif */
+	font-family: 'Irnia Serif', Georgia, serif;
+	color:var(--text);
+	/* make default weight 300 as requested */
+	font-weight:300;
+	overflow:hidden;
+}
+.center{
+	position:relative;
+	height:100vh;
+	display:flex;
+	align-items:center;
+	justify-content:center;
+	flex-direction:column;
+	text-align:center;
+	z-index:2;
+}
+.headline{font-size:4.2rem; font-weight:300; letter-spacing:2px; margin:0;}
+.muted{color:var(--muted); margin-right:.6rem; font-size:1em; opacity:.85; display:inline-block; vertical-align:middle}
+.brackets{font-family: Georgia, serif; font-size:1em; display:inline-block; vertical-align:middle}
+.typed{
+	/* inherit the page serif (Irnia Serif if available) */
+	font-weight:300;
+	/* match headline size */
+	font-size:1em;
+	color:var(--accent);
+	/* caret sized in em so it scales with the text */
+	border-right:.06em solid rgba(0,0,0,0.0);
+	padding-right:.25rem;
+	white-space:nowrap;
+}
+
+/* blinking caret animation - apply by adding .caret class */
+@keyframes blink-caret { 0% { border-right-color: rgba(0,0,0,0.9); } 50% { border-right-color: transparent; } 100% { border-right-color: rgba(0,0,0,0.9); } }
+.typed.caret{ animation: blink-caret 1s steps(1) infinite; border-right:.06em solid rgba(0,0,0,0.9); }
+
+/* remove focus box/outline around editable text and bracket container */
+.brackets:focus,
+.brackets:focus-visible,
+.typed:focus,
+.typed:focus-visible{
+	outline: none !important;
+	box-shadow: none !important;
+	border: none !important;
+}
+.demo{display:inline-block;margin-top:2.2rem;color:var(--text);text-decoration:underline;font-weight:300}
+
+/* floating words layer */
+#floating-words{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:1}
+.float-word{
+	position:absolute;
+	color:rgba(0,0,0,0.12);
+	/* use the same serif as the page */
+	font-family: inherit;
+	font-size:1.2rem;
+	white-space:nowrap;
+	transform-origin:center;
+	user-select:none;
+}
+
+/* subtle drifting */
+@keyframes driftUp {
+	from{transform: translateY(0) translateX(0) rotate(0deg); opacity:0}
+	10%{opacity:0.06}
+	to{transform: translateY(-20vh) translateX(12vw) rotate(10deg); opacity:0.02}
+}
+
+/* responsive scaling */
+@media (max-width:600px){
+	.headline{font-size:2.2rem}
+	.typed{font-size:1.1rem}
+}

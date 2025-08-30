@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Topic</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="topic.css" />
+    <style>
+      /* Light mode override for topic page */
+      body{ background: #fff; color: #111; }
+      .center{ min-height:100vh; display:flex; align-items:center; justify-content:center; flex-direction:column; }
+  .topic{ font-size:1.5rem; color:#111; font-weight:300; }
+      .subtitle{ margin-top:1rem; color:#444; }
+      a.back{ margin-top:2rem; color:#0066cc; text-decoration:none }
+
+  /* list icon replacing the previous round radio */
+  .list .row{ display:flex; align-items:flex-start; gap:12px; padding:8px 0; }
+  .list .icon{ width:30px; flex:0 0 30px; text-align:center; color:#666; font-size:1.05rem; }
+  .list .info{ flex:1; }
+
+      /* loading overlay */
+      #loadingOverlay{ position:fixed; inset:0; display:none; align-items:center; justify-content:center; background: rgba(255,255,255,0.85); z-index:999; }
+      .loadingInner{ display:flex; flex-direction:column; align-items:center; }
+      .spinner{ width:56px; height:56px; border:6px solid #eee; border-top-color:#111; border-radius:50%; animation:spin 1s linear infinite; }
+      .loading-text{ margin-top:12px; color:#111; font-size:1rem; font-weight:300; }
+      @keyframes spin{ to { transform: rotate(360deg); } }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <!-- loading overlay shown while topics are being fetched/processed -->
+      <div id="loadingOverlay" aria-hidden="true">
+        <div class="loadingInner">
+          <div class="spinner" aria-hidden="true"></div>
+          <div class="loading-text">Loading topics…</div>
+        </div>
+      </div>
+
+      <aside class="sidebar" aria-hidden="true">
+        <!-- simple globe-like stacked-lines logo (inline SVG, free to use) -->
+        <a href="demo.html" class="logo" aria-label="Home">
+          <img src="img/Frame 1000001351.png" width="38" height="38" alt="Logo" />
+        </a>
+      </aside>
+
+      <section class="content">
+        <header class="topbar">
+          <div>
+            <div class="topic" id="topicText">Subject</div>
+          </div>
+        </header>
+
+        <div class="panel">
+          <div class="searchRow">
+            <input id="filterInput" class="search" placeholder="Search..." aria-label="Search libraries" />
+          </div>
+          <div id="list" class="list" role="list"></div>
+        </div>
+      </section>
+    </div>
+
+    <script>
+      // read subject
+      function getSubject(){
+        const params = new URLSearchParams(window.location.search);
+        return params.get('subject') || '';
+      }
+      const subj = getSubject();
+      document.getElementById('topicText').textContent = subj || 'Topic';
+
+      // simple loading helper
+      const loadingOverlay = document.getElementById('loadingOverlay');
+      function showLoading(on){
+        if(!loadingOverlay) return;
+        loadingOverlay.style.display = on ? 'flex' : 'none';
+        loadingOverlay.setAttribute('aria-hidden', on ? 'false' : 'true');
+      }
+
+      // show loading while we attempt to fetch data
+      showLoading(true);
+
+      // embedded fallback topics mapping
+      const embeddedTopics = {
+        'doctor': [
+          {name:'General Practitioner', repo:'example.com/gp'},
+          {name:'Cardiologist', repo:'example.com/cardiology'},
+          {name:'Neurologist', repo:'example.com/neurology'},
+          {name:'Pediatrician', repo:'example.com/pediatrics'}
+        ],
+        'developer': [
+          {name:'React Developer', repo:'github.com/example/react'},
+          {name:'Node.js Developer', repo:'github.com/example/node'},
+          {name:'Full Stack Developer', repo:'github.com/example/fullstack'},
+          {name:'DevOps Engineer', repo:'github.com/example/devops'}
+        ],
+        'default': [
+          {name:'Flux', repo:'github.com/FluxML/Flux.jl'},
+          {name:'MLJ', repo:'github.com/alan-turing-institute/MLJ.jl'},
+          {name:'MLJTuning', repo:'github.com/JuliaAI/MLJTuning.jl'}
+        ]
+      };
+
+      const listEl = document.getElementById('list');
+      function render(items){
+        listEl.innerHTML='';
+        items.forEach(it => {
+          const row = document.createElement('div'); row.className='row'; row.role='listitem';
+          row.style.cursor = it.repo ? 'pointer' : 'default';
+          const icon = document.createElement('span'); icon.className='icon'; icon.setAttribute('aria-hidden','true'); icon.textContent = '🔗';
+          const info = document.createElement('div'); info.className='info';
+          // if we have a URL, render the title as a link
+          let titleEl;
+          if (it.repo) {
+            titleEl = document.createElement('a');
+            titleEl.className = 'title';
+            titleEl.href = it.repo;
+            titleEl.target = '_blank';
+            titleEl.rel = 'noopener noreferrer';
+            titleEl.textContent = it.name;
+          } else {
+            titleEl = document.createElement('div');
+            titleEl.className = 'title';
+            titleEl.textContent = it.name;
+          }
+          const repo = document.createElement('div'); repo.className='repo'; repo.textContent = it.repo || '';
+          info.appendChild(titleEl); info.appendChild(repo);
+          row.appendChild(icon); row.appendChild(info);
+          // clicking the row navigates to the repo if available
+          if (it.repo) {
+            row.addEventListener('click', ()=>{ const w = window.open(it.repo, '_blank'); if(w) w.opener = null; });
+          }
+          listEl.appendChild(row);
+        });
+      }
+
+      // attempt to fetch topics for this subject from a web search API (Google Custom Search) if API key/CX are provided,
+      // then topics.json, then embedded fallback.
+      // To use Google CSE, set window.GOOGLE_CSE_KEY and window.GOOGLE_CSE_CX before this script runs.
+      // try to load local config file (optional) for Google CSE credentials
+      async function loadCSEConfig(){
+        try{
+          const r = await fetch('cse-config.json');
+          if(!r.ok) return;
+          const j = await r.json();
+          if(j && j.key && j.cx){ window.GOOGLE_CSE_KEY = j.key; window.GOOGLE_CSE_CX = j.cx; }
+        }catch(e){ /* ignore */ }
+      }
+
+      async function fetchCSETopics(subject){
+        if(!subject) return null;
+        const key = window.GOOGLE_CSE_KEY || '';
+        const cx = window.GOOGLE_CSE_CX || '';
+        if(!key || !cx) return null; // no credentials provided
+        try{
+          const url = 'https://www.googleapis.com/customsearch/v1?key=' + encodeURIComponent(key) + '&cx=' + encodeURIComponent(cx) + '&q=' + encodeURIComponent(subject) + '&num=10';
+          const r = await fetch(url);
+          if(!r.ok) return null;
+          const j = await r.json();
+          if(j && j.items && j.items.length){
+            return j.items.map(i => ({ name: i.title, repo: i.link }));
+          }
+        }catch(err){
+          // network/permission failure or CORS blocked
+        }
+        return null;
+      }
+
+      function setupFilter(items){
+        const input = document.getElementById('filterInput');
+        input.value = '';
+        input.removeEventListener('input', input._listener || (()=>{}));
+        input._listener = ()=>{
+          const q = input.value.trim().toLowerCase();
+          if(!q) return render(items);
+          const filtered = items.filter(l => (l.name + ' ' + (l.repo||'')).toLowerCase().includes(q));
+          render(filtered);
+        };
+        input.addEventListener('input', input._listener);
+      }
+
+      (async function(){
+        // attempt to load optional local CSE config before trying web search
+        await loadCSEConfig();
+        try{
+            // 1) try local proxy first (/search?q=...), then Google CSE (client-side), then topics.json
+            try{
+              // bias the query toward careers/professions to avoid unrelated topics with same name
+              const proxyQuery = (subj + ' career OR profession OR job').trim();
+              const p = await fetch('/search?q=' + encodeURIComponent(proxyQuery));
+              if(p.ok){
+                const pj = await p.json();
+                if(pj && pj.items && pj.items.length){
+                  const mapped = pj.items.map(i=>({name:i.title, repo:i.link}));
+                  render(mapped); setupFilter(mapped); showLoading(false); return;
+                }
+              }
+            }catch(_){ /* ignore proxy failure */ }
+
+            const web = await fetchCSETopics(subj);
+            if(web && web.length){ render(web); setupFilter(web); showLoading(false); return; }
+
+          // 2) try local topics.json
+          const r = await fetch('topics.json');
+          if(r.ok){
+            const remoteTopics = await r.json();
+            const key = (subj || '').trim().toLowerCase();
+            const data = remoteTopics[key] || remoteTopics['default'] || embeddedTopics['default'];
+            const mapped = data.map(x=>({name:x.name, repo:x.path || x.repo || ''}));
+            render(mapped); setupFilter(mapped); showLoading(false); return;
+          }
+
+          // otherwise fall through to embedded
+          throw new Error('no remote topics');
+        }catch(e){
+          const key = (subj || '').trim().toLowerCase();
+          const data = embeddedTopics[key] || embeddedTopics['default'];
+          render(data);
+          setupFilter(data);
+          showLoading(false);
+        }
+      })();
+    </script>
+  </body>
+</html>
